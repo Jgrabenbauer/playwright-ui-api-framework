@@ -1,0 +1,131 @@
+name: Playwright Tests
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+  workflow_dispatch:
+
+jobs:
+  # API tests run first - fast feedback with no browser overhead
+  api-tests:
+    name: API Tests
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run API tests
+        run: npm run test:api
+        env:
+          CI: true
+          API_BASE_URL: https://restful-booker.herokuapp.com
+          BOOKER_USER: admin
+          BOOKER_PASS: password123
+
+      - name: Upload API test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-test-results
+          path: test-results/
+          retention-days: 30
+
+      - name: Upload API HTML report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+  # UI tests run second - slower due to browser requirements
+  ui-tests:
+    name: UI Tests
+    needs: api-tests
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Run UI tests
+        run: npm run test:ui
+        env:
+          CI: true
+          UI_BASE_URL: https://www.saucedemo.com
+
+      - name: Upload UI test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-test-results
+          path: test-results/
+          retention-days: 30
+
+      - name: Upload UI HTML report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload videos on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ui-test-videos
+          path: test-results/**/*.webm
+          retention-days: 7
+
+  # Aggregate results and publish report
+  publish-results:
+    name: Publish Test Results
+    needs: [api-tests, ui-tests]
+    runs-on: ubuntu-latest
+    if: always()
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    
+    steps:
+      - name: Download all test results
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish JUnit Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        with:
+          files: |
+            artifacts/**/junit.xml
+          check_name: Test Results Summary
+          comment_mode: off
