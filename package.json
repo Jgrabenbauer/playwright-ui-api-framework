@@ -1,0 +1,41 @@
+{
+  "name": "playwright-ui-api-framework",
+  "version": "1.0.0",
+  "description": "Production-quality Playwright framework supporting UI and API testing",
+  "main": "index.js",
+  "scripts": {
+    "test:ui": "playwright test --project=ui",
+    "test:api": "playwright test --project=api",
+    "test:all": "playwright test",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:regression": "playwright test --grep @regression",
+    "test:ui:smoke": "playwright test --project=ui --grep @smoke",
+    "test:api:smoke": "playwright test --project=api --grep @smoke",
+    "test:headed": "playwright test --project=ui --headed",
+    "test:debug": "playwright test --project=ui --debug",
+    "report": "playwright show-report",
+    "postinstall": "playwright install chromium"
+  },
+  "keywords": [
+    "playwright",
+    "typescript",
+    "automation",
+    "testing",
+    "ui-testing",
+    "api-testing"
+  ],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.48.0",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "typescript": "^5.3.3"
+  }
+}
